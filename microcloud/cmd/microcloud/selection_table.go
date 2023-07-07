@@ -253,7 +253,6 @@ Up/down to move; right to select all; left to select none.`,
 	go func() {
 		err := survey.AskOne(t.prompt, &t.answers, survey.WithKeepFilter(true))
 		if err != nil && err.Error() != "please provide options to select from" {
-
 			t.askChan <- fmt.Errorf("Failed to confirm selection: %w", err)
 			return
 		}

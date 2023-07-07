@@ -61,7 +61,7 @@ func (c *cmdInit) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failed to retrieve system hostname: %w", err)
 	}
 
-	if !c.flagAutoSetup {
+	if !c.flagAutoSetup { //nolint:staticcheck
 		// FIXME: MicroCeph does not currently support non-hostname cluster names.
 		// name, err = cli.AskString(fmt.Sprintf("Specify a name for this system [default=%s]: ", name), name, nil)
 		// if err != nil {
@@ -161,7 +161,6 @@ func lookupPeers(s *service.ServiceHandler, autoSetup bool, subnet *net.IPNet) (
 
 			answers, err = table.GetSelections()
 			selectionCh <- err
-			return
 		}()
 	}
 

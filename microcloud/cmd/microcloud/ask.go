@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/canonical/lxd/shared/api"
-	lxdAPI "github.com/canonical/lxd/shared/api"
 	cli "github.com/canonical/lxd/shared/cmd"
 	"github.com/canonical/lxd/shared/logger"
 	"github.com/canonical/lxd/shared/units"
@@ -140,14 +139,14 @@ func askAddress(autoSetup bool, listenAddr string) (string, *net.IPNet, error) {
 	return listenAddr, subnet, nil
 }
 
-func askDisks(sh *service.ServiceHandler, peers map[string]mdns.ServerInfo, bootstrap bool, autoSetup bool, wipeAllDisks bool) (map[string][]lxdAPI.ClusterMemberConfigKey, map[string][]cephTypes.DisksPost, error) {
+func askDisks(sh *service.ServiceHandler, peers map[string]mdns.ServerInfo, bootstrap bool, autoSetup bool, wipeAllDisks bool) (map[string][]api.ClusterMemberConfigKey, map[string][]cephTypes.DisksPost, error) {
 	if bootstrap {
 		// Add the local system to the list of peers so we can select disks.
 		peers[sh.Name] = mdns.ServerInfo{Name: sh.Name}
 		defer delete(peers, sh.Name)
 	}
 
-	allResources := make(map[string]*lxdAPI.Resources, len(peers))
+	allResources := make(map[string]*api.Resources, len(peers))
 	var err error
 	for peer, info := range peers {
 		allResources[peer], err = sh.Services[types.LXD].(*service.LXDService).GetResources(peer, info.Address, info.AuthSecret)
@@ -156,9 +155,9 @@ func askDisks(sh *service.ServiceHandler, peers map[string]mdns.ServerInfo, boot
 		}
 	}
 
-	validDisks := make(map[string][]lxdAPI.ResourcesStorageDisk, len(allResources))
+	validDisks := make(map[string][]api.ResourcesStorageDisk, len(allResources))
 	for peer, r := range allResources {
-		validDisks[peer] = make([]lxdAPI.ResourcesStorageDisk, 0, len(r.Storage.Disks))
+		validDisks[peer] = make([]api.ResourcesStorageDisk, 0, len(r.Storage.Disks))
 		for _, disk := range r.Storage.Disks {
 			if len(disk.Partitions) == 0 {
 				validDisks[peer] = append(validDisks[peer], disk)
@@ -166,7 +165,7 @@ func askDisks(sh *service.ServiceHandler, peers map[string]mdns.ServerInfo, boot
 		}
 	}
 
-	var diskConfig map[string][]lxdAPI.ClusterMemberConfigKey
+	var diskConfig map[string][]api.ClusterMemberConfigKey
 	var reservedDisks map[string]string
 	wantsDisks := true
 	if !autoSetup {
@@ -196,9 +195,9 @@ func askDisks(sh *service.ServiceHandler, peers map[string]mdns.ServerInfo, boot
 
 	var cephDisks map[string][]cephTypes.DisksPost
 	if sh.Services[types.MicroCeph] != nil {
-		availableDisks := map[string][]lxdAPI.ResourcesStorageDisk{}
+		availableDisks := map[string][]api.ResourcesStorageDisk{}
 		for peer, disks := range validDisks {
-			peerDisks := []lxdAPI.ResourcesStorageDisk{}
+			peerDisks := []api.ResourcesStorageDisk{}
 			for _, disk := range disks {
 				devicePath := fmt.Sprintf("/dev/%s", disk.ID)
 				if disk.DeviceID != "" {
@@ -261,7 +260,7 @@ func askDisks(sh *service.ServiceHandler, peers map[string]mdns.ServerInfo, boot
 	}
 
 	if !bootstrap {
-		sourceTemplate := lxdAPI.ClusterMemberConfigKey{
+		sourceTemplate := api.ClusterMemberConfigKey{
 			Entity: "storage-pool",
 			Name:   "remote",
 			Key:    "source",
@@ -276,7 +275,7 @@ func askDisks(sh *service.ServiceHandler, peers map[string]mdns.ServerInfo, boot
 	return diskConfig, cephDisks, nil
 }
 
-func askLocalPool(peerDisks map[string][]lxdAPI.ResourcesStorageDisk, autoSetup bool, wipeAllDisks bool, lxd service.LXDService) (map[string][]lxdAPI.ClusterMemberConfigKey, map[string]string, error) {
+func askLocalPool(peerDisks map[string][]api.ResourcesStorageDisk, autoSetup bool, wipeAllDisks bool, lxd service.LXDService) (map[string][]api.ClusterMemberConfigKey, map[string]string, error) {
 	data := [][]string{}
 	selected := map[string]string{}
 	for peer, disks := range peerDisks {
@@ -368,20 +367,20 @@ func askLocalPool(peerDisks map[string][]lxdAPI.ResourcesStorageDisk, autoSetup 
 		toWipe = selected
 	}
 
-	wipeDisk := lxdAPI.ClusterMemberConfigKey{
+	wipeDisk := api.ClusterMemberConfigKey{
 		Entity: "storage-pool",
 		Name:   "local",
 		Key:    "source.wipe",
 		Value:  "true",
 	}
 
-	sourceTemplate := lxdAPI.ClusterMemberConfigKey{
+	sourceTemplate := api.ClusterMemberConfigKey{
 		Entity: "storage-pool",
 		Name:   "local",
 		Key:    "source",
 	}
 
-	memberConfig := make(map[string][]lxdAPI.ClusterMemberConfigKey, len(selected))
+	memberConfig := make(map[string][]api.ClusterMemberConfigKey, len(selected))
 	for target, path := range selected {
 		if target == lxd.Name() {
 			err := lxd.AddLocalPool(path, wipeable && toWipe[target] != "")
@@ -390,7 +389,7 @@ func askLocalPool(peerDisks map[string][]lxdAPI.ResourcesStorageDisk, autoSetup 
 			}
 		} else {
 			sourceTemplate.Value = path
-			memberConfig[target] = []lxdAPI.ClusterMemberConfigKey{sourceTemplate}
+			memberConfig[target] = []api.ClusterMemberConfigKey{sourceTemplate}
 			if toWipe[target] != "" {
 				memberConfig[target] = append(memberConfig[target], wipeDisk)
 			}
@@ -400,7 +399,7 @@ func askLocalPool(peerDisks map[string][]lxdAPI.ResourcesStorageDisk, autoSetup 
 	return memberConfig, selected, nil
 }
 
-func askRemotePool(peerDisks map[string][]lxdAPI.ResourcesStorageDisk, autoSetup bool, wipeAllDisks bool, ceph service.CephService) (map[string][]cephTypes.DisksPost, error) {
+func askRemotePool(peerDisks map[string][]api.ResourcesStorageDisk, autoSetup bool, wipeAllDisks bool, ceph service.CephService) (map[string][]cephTypes.DisksPost, error) {
 	header := []string{"LOCATION", "MODEL", "CAPACITY", "TYPE", "PATH"}
 	data := [][]string{}
 	for peer, disks := range peerDisks {
@@ -662,7 +661,7 @@ func askNetwork(sh *service.ServiceHandler, peers map[string]mdns.ServerInfo, lx
 
 	if !bootstrap {
 		if lxdConfig == nil {
-			lxdConfig = map[string][]lxdAPI.ClusterMemberConfigKey{}
+			lxdConfig = map[string][]api.ClusterMemberConfigKey{}
 		}
 
 		if len(selected) != 0 {
