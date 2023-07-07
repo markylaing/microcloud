@@ -41,7 +41,7 @@ func (s ServerInfo) LookupKey() string {
 
 // forwardingWriter forwards the mdns log message to LXD's logger package.
 type forwardingWriter struct {
-	w io.Writer
+	io.Writer
 }
 
 func (f forwardingWriter) Write(p []byte) (int, error) {
