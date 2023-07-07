@@ -52,16 +52,12 @@ func NewServiceHandler(name string, addr string, stateDir string, debug bool, ve
 		switch serviceType {
 		case types.MicroCloud:
 			service, err = NewCloudService(context.Background(), name, addr, stateDir, verbose, debug)
-			break
 		case types.MicroCeph:
 			service, err = NewCephService(context.Background(), name, addr, stateDir)
-			break
 		case types.MicroOVN:
 			service, err = NewOVNService(context.Background(), name, addr, stateDir)
-			break
 		case types.LXD:
 			service, err = NewLXDService(context.Background(), name, addr, stateDir)
-			break
 		}
 
 		if err != nil {
@@ -157,7 +153,6 @@ func (s *ServiceHandler) Broadcast() error {
 	}
 
 	return nil
-
 }
 
 // StopBroadcast stops the mDNS broadcast and token lookup, as we are initiating a new cluster.
