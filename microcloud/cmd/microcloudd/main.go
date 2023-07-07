@@ -18,12 +18,6 @@ import (
 	"github.com/canonical/microcloud/microcloud/version"
 )
 
-// Debug indicates whether to log debug messages or not.
-var Debug bool
-
-// Verbose indicates verbosity.
-var Verbose bool
-
 type cmdGlobal struct {
 	cmd *cobra.Command //nolint:structcheck,unused // FIXME: Remove the nolint flag when this is in use.
 
