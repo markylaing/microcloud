@@ -10,6 +10,10 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
+func init() {
+	survey.MultiSelectQuestionTemplate = multiSelectQuestionTemplate
+}
+
 // SelectableTable represents a CLI table with selectable rows.
 type SelectableTable struct {
 	askChan chan error
@@ -105,7 +109,7 @@ func NewSelectableTable(header []string, data [][]string) *SelectableTable {
 // multiSelectQuestionTemplate overwrites the default survey package template to accommodate table rows as selectable options.
 const multiSelectQuestionTemplate = `
 {{- define "option"}}
-	  {{- $line := "%s" }}
+	  {{- $line := index .Default "border" }}
 	  {{- if (eq .CurrentOpt.Value (index .PageEntries 0).Value) }}
 	         {{- print (scroll_hint_top $line .FilterMessage .PageEntries) "\n" }}
 	  {{- end}}
@@ -126,8 +130,8 @@ const multiSelectQuestionTemplate = `
   {{- "\n"}}
 {{- end}}
 {{- if gt (len .PageEntries) 0 }}
-      {{- "%s\n"}}
-      {{- "%s\n"}}
+      {{- index .Default "border" }}{{ "\n" }}
+      {{- index .Default "header" }}{{ "\n" }}
 {{- end}}
 {{- range $ix, $option := .PageEntries}}
   {{- template "option" $.IterateOption $ix $option}}
@@ -237,7 +241,6 @@ func (t *SelectableTable) prepareTemplate() {
 	core.TemplateFuncsNoColor["add"] = core.TemplateFuncsWithColor["add"]
 	core.TemplateFuncsNoColor["scroll_hint_bot"] = core.TemplateFuncsWithColor["scroll_hint_bot"]
 	core.TemplateFuncsNoColor["scroll_hint_top"] = core.TemplateFuncsWithColor["scroll_hint_top"]
-	survey.MultiSelectQuestionTemplate = fmt.Sprintf(multiSelectQuestionTemplate, t.border, t.border, t.header)
 }
 
 // Render outputs the SelectableTable and returns a slice of selected rows.
@@ -247,6 +250,10 @@ func (t *SelectableTable) Render(entries []string) {
 Up/down to move; right to select all; left to select none.`,
 		Options:  entries,
 		PageSize: 15,
+		Default: map[string]string{
+			"border": t.border,
+			"header": t.header,
+		},
 	}
 
 	t.prepareTemplate()
@@ -323,7 +330,6 @@ func (t *SelectableTable) Update(row []string) {
 	}
 
 	// Update the template as the size of the header and borders may have changed.
-	survey.MultiSelectQuestionTemplate = fmt.Sprintf(multiSelectQuestionTemplate, t.border, t.border, t.header)
 	t.prompt.Options = newEntries
 	t.prompt.OnChange(terminal.IgnoreKey, defaultPromptConfig())
 }
